@@ -1,5 +1,9 @@
-go modbus [![Build Status](https://travis-ci.org/goburrow/modbus.svg?branch=master)](https://travis-ci.org/goburrow/modbus) [![GoDoc](https://godoc.org/github.com/goburrow/modbus?status.svg)](https://godoc.org/github.com/goburrow/modbus)
-=========
+[![Build Status](https://travis-ci.com/activeshadow/modbus.svg?branch=master)](https://travis-ci.com/activeshadow/modbus)
+[![API Reference](https://img.shields.io/badge/godoc-reference-5272B4)](https://pkg.go.dev/actshad.dev/modbus?tab=doc)
+[![Software License](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/activeshadow/modbus/blob/master/LICENSE)
+
+Golang Modbus Client (Master)
+=============================
 Fault-tolerant, fail-fast implementation of Modbus protocol in Go.
 
 Supported functions
