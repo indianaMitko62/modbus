@@ -13,19 +13,20 @@ import (
 
 const (
 	// Bit access
-	FuncCodeReadDiscreteInputs = 2
-	FuncCodeReadCoils          = 1
-	FuncCodeWriteSingleCoil    = 5
-	FuncCodeWriteMultipleCoils = 15
+	FuncCodeReadDiscreteInputs = 2  // 0x02
+	FuncCodeReadCoils          = 1  // 0x01
+	FuncCodeWriteSingleCoil    = 5  // 0x05
+	FuncCodeWriteMultipleCoils = 15 // 0x0F
 
 	// 16-bit access
-	FuncCodeReadInputRegisters         = 4
-	FuncCodeReadHoldingRegisters       = 3
-	FuncCodeWriteSingleRegister        = 6
-	FuncCodeWriteMultipleRegisters     = 16
-	FuncCodeReadWriteMultipleRegisters = 23
-	FuncCodeMaskWriteRegister          = 22
-	FuncCodeReadFIFOQueue              = 24
+	FuncCodeReadInputRegisters         = 4  // 0x04
+	FuncCodeReadHoldingRegisters       = 3  // 0x03
+	FuncCodeWriteSingleRegister        = 6  // 0x06
+	FuncCodeWriteMultipleRegisters     = 16 // 0x10
+	FuncCodeReadWriteMultipleRegisters = 23 // 0x17
+	FuncCodeMaskWriteRegister          = 22 // 0x16
+	FuncCodeReadFIFOQueue              = 24 // 0x18
+	FuncCodeReadDeviceIdentification   = 43 // 0x2B
 )
 
 const (
