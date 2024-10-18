@@ -350,13 +350,29 @@ func (mb *client) WriteMultipleRegisters(address, quantity uint16, value []byte)
 //
 
 func (mb *client) FuncReadDeviceIdentificationBasic(object_id uint16) (results []byte, err error) {
-
+	var meiType uint16 = 0x0E
+	var readDeviceIDCode uint16 = 0x01
 	request := ProtocolDataUnit{
 		FunctionCode: FuncCodeReadDeviceIdentification,
-		Data:         dataBlock(0x0E, 0x01, object_id),
+		Data:         dataBlock(meiType, readDeviceIDCode, object_id),
 	}
-	_, err = mb.send(&request)
+	response, err := mb.send(&request)
 	if err != nil {
+		return
+	}
+
+	results = response.Data
+
+	respMeiType := binary.BigEndian.Uint16(results)
+	if meiType != respMeiType {
+		err = fmt.Errorf("modbus: response mei type '%v' does not match request '%v'", respMeiType, meiType)
+		return
+	}
+	results = results[2:]
+
+	respDeviceIDCode := binary.BigEndian.Uint16(results)
+	if readDeviceIDCode != respDeviceIDCode {
+		err = fmt.Errorf("modbus: response device ID code '%v' does not match request '%v'", respDeviceIDCode, readDeviceIDCode)
 		return
 	}
 	return
