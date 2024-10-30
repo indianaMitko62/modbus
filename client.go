@@ -343,13 +343,23 @@ func (mb *client) WriteMultipleRegisters(address, quantity uint16, value []byte)
 
 // Request:
 //
-//	Function code         : 1 byte (0x2B)
-//	MEI Type      		  : 1 byte
-//	Read Device ID code   : 1 byte
-//	Object Id             : 1 byte
+//	Function code			: 1 byte (0x2B)
+//	MEI Type				: 1 byte
+//	Read Device ID code		: 1 byte
+//	Object Id				: 1 byte
 //
 // Response:
-//
+// 	Function code 			: 1 byte (0x2B)
+// 	MEI Type 				: 1 byte (0x0E)
+// 	Read Device ID code 	: 1 byte
+// 	Conformity level 		: 1 byte
+// 	More Follows  			: 1 byte
+// 	Next Object Id  		: 1 byte
+// 	Number of objects  		: 1 byte
+// 	List Of
+// 			Object ID  			: 1 byte
+// 			Object length  		: 1 byte
+// 			Object Value 		: Object length
 
 func (mb *client) ReadDeviceIdentificationBasic(object_id uint8) (vendorName string, productCode string, majorMinorVersion string, err error) {
 	var meiType uint8 = 0x0E
