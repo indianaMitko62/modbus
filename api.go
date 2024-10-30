@@ -47,5 +47,6 @@ type Client interface {
 	// of register in a remote device and returns FIFO value register.
 	ReadFIFOQueue(address uint16) (results []byte, err error)
 
-	ReadDeviceIdentificationBasic(object_id uint8) (vendorName string, productCode string, majorMinorVersion string, err error)
+	ReadDeviceIdentificationBasic() (vendorName string, productCode string, majorMinorVersion string, err error)
+	ReadDeviceIdentificationSpecific(object_id uint8) (vendorName string, productCode string, majorMinorVersion string, err error)
 }

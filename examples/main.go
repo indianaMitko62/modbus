@@ -30,7 +30,7 @@ func main() {
 
 	client := modbus.NewClient(handler)
 
-	vendorName, productCode, majorMinorVersion, err := client.ReadDeviceIdentificationBasic(0)
+	vendorName, productCode, majorMinorVersion, err := client.ReadDeviceIdentificationSpecific(1)
 	if err != nil {
 		fmt.Println(err)
 		return

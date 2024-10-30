@@ -357,13 +357,12 @@ func (mb *client) WriteMultipleRegisters(address, quantity uint16, value []byte)
 // 	Next Object Id  		: 1 byte
 // 	Number of objects  		: 1 byte
 // 	List Of
-// 			Object ID  			: 1 byte
-// 			Object length  		: 1 byte
-// 			Object Value 		: Object length
+// 			Object ID  		: 1 byte
+// 			Object length  	: 1 byte
+// 			Object Value 	: Object length
 
-func (mb *client) ReadDeviceIdentificationBasic(object_id uint8) (vendorName string, productCode string, majorMinorVersion string, err error) {
+func (mb *client) readDeviceIdentification(object_id uint8, readDeviceIDCode uint8) (vendorName string, productCode string, majorMinorVersion string, err error) {
 	var meiType uint8 = 0x0E
-	var readDeviceIDCode uint8 = 0x01
 	data := []byte{meiType, readDeviceIDCode, object_id}
 	request := ProtocolDataUnit{
 		FunctionCode: FuncCodeReadDeviceIdentification,
@@ -462,6 +461,14 @@ func (mb *client) ReadDeviceIdentificationBasic(object_id uint8) (vendorName str
 	}
 
 	return
+}
+
+func (mb *client) ReadDeviceIdentificationBasic() (vendorName string, productCode string, majorMinorVersion string, err error) {
+	return mb.readDeviceIdentification(0, 0x01)
+}
+
+func (mb *client) ReadDeviceIdentificationSpecific(object_id uint8) (vendorName string, productCode string, majorMinorVersion string, err error) {
+	return mb.readDeviceIdentification(object_id, 0x04)
 }
 
 // Request:
