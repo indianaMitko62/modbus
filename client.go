@@ -5,8 +5,10 @@
 package modbus
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 )
 
 // ClientHandler is the interface that groups the Packager and Transporter methods.
@@ -349,31 +351,106 @@ func (mb *client) WriteMultipleRegisters(address, quantity uint16, value []byte)
 // Response:
 //
 
-func (mb *client) ReadDeviceIdentificationBasic(object_id uint16) (results []byte, err error) {
-	var meiType uint16 = 0x0E
-	var readDeviceIDCode uint16 = 0x01
+func (mb *client) ReadDeviceIdentificationBasic(object_id uint8) (vendorName string, productCode string, majorMinorVersion string, err error) {
+	var meiType uint8 = 0x0E
+	var readDeviceIDCode uint8 = 0x01
+	data := []byte{meiType, readDeviceIDCode, object_id}
 	request := ProtocolDataUnit{
 		FunctionCode: FuncCodeReadDeviceIdentification,
-		Data:         dataBlock(meiType, readDeviceIDCode, object_id),
+		Data:         data,
 	}
 	response, err := mb.send(&request)
 	if err != nil {
 		return // add error message
 	}
 
-	results = response.Data
+	r := bytes.NewReader(response.Data)
 
-	respMeiType := binary.BigEndian.Uint16(results)
-	if meiType != respMeiType {
+	respMeiType, err := r.ReadByte()
+	if err != nil {
+		return
+	}
+	if meiType != uint8(respMeiType) {
 		err = fmt.Errorf("modbus: response mei type '%v' does not match request '%v'", respMeiType, meiType)
 		return
 	}
-	results = results[2:]
-	respDeviceIDCode := binary.BigEndian.Uint16(results)
-	if readDeviceIDCode != respDeviceIDCode {
+
+	respDeviceIDCode, err := r.ReadByte()
+	if err != nil {
+		return
+	}
+	if readDeviceIDCode != uint8(respDeviceIDCode) {
 		err = fmt.Errorf("modbus: response device ID code '%v' does not match request '%v'", respDeviceIDCode, readDeviceIDCode)
 		return
 	}
+
+	respConformityLevel, err := r.ReadByte()
+	if err != nil {
+		return
+	}
+	if respConformityLevel&0x01 > 3 {
+		err = fmt.Errorf("modbus: invalid response conformity level '%v'", respConformityLevel)
+		return
+	}
+
+	moreFollows, err := r.ReadByte()
+	if err != nil {
+		return
+	}
+	if moreFollows != 0 && moreFollows != 0xFF {
+		err = fmt.Errorf("modbus: invalid response more follows flag '%v'", moreFollows)
+		return
+	}
+
+	nextObjectID, err := r.ReadByte()
+	if err != nil {
+		return
+	}
+	numberOfObjects, err := r.ReadByte()
+	if err != nil {
+		return
+	}
+	if nextObjectID != 0 {
+		err = fmt.Errorf("modbus: currently not supporting multi-transaction responses. Received first '%v' objects", numberOfObjects)
+	}
+
+	var objID uint8
+	var objLen uint8
+
+	for i := 0; i < int(numberOfObjects); i++ {
+		objID, err = r.ReadByte()
+		if err != nil {
+			return
+		}
+		objLen, err = r.ReadByte()
+		if err != nil {
+			return
+		}
+		switch objID {
+		case 0x00:
+			vendorNameBytes := make([]byte, objLen)
+			_, err = io.ReadFull(r, vendorNameBytes)
+			if err != nil {
+				return
+			}
+			vendorName = string(vendorNameBytes)
+		case 0x01:
+			vendorPorductCodeBytes := make([]byte, objLen)
+			_, err = io.ReadFull(r, vendorPorductCodeBytes)
+			if err != nil {
+				return
+			}
+			productCode = string(vendorPorductCodeBytes)
+		case 0x02:
+			majorMinorVersionBytes := make([]byte, objLen)
+			_, err = io.ReadFull(r, majorMinorVersionBytes)
+			if err != nil {
+				return
+			}
+			majorMinorVersion = string(majorMinorVersionBytes)
+		}
+	}
+
 	return
 }
 
