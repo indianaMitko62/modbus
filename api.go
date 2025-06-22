@@ -49,4 +49,6 @@ type Client interface {
 
 	ReadDeviceIdentificationBasic() (vendorName string, productCode string, majorMinorVersion string, err error)
 	ReadDeviceIdentificationSpecific(object_id uint8) (vendorName string, productCode string, majorMinorVersion string, err error)
+
+	WriteFileRecord(fileNumber uint16, recordNumber uint16, value []uint16, count uint16) (err error)
 }

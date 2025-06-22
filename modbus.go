@@ -23,8 +23,9 @@ const (
 	FuncCodeReadHoldingRegisters       = 3  // 0x03
 	FuncCodeWriteSingleRegister        = 6  // 0x06
 	FuncCodeWriteMultipleRegisters     = 16 // 0x10
-	FuncCodeReadWriteMultipleRegisters = 23 // 0x17
+	FuncCodeWriteFileRecord            = 21 // 0x15
 	FuncCodeMaskWriteRegister          = 22 // 0x16
+	FuncCodeReadWriteMultipleRegisters = 23 // 0x17
 	FuncCodeReadFIFOQueue              = 24 // 0x18
 	FuncCodeReadDeviceIdentification   = 43 // 0x2B
 )

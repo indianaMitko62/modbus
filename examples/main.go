@@ -10,15 +10,16 @@ import (
 )
 
 const (
-	rtuDevice = "/dev/ttyUSB0"
+	rtuDevice = "/tmp/virtualClient"
 )
 
 func main() {
 	handler := modbus.NewRTUClientHandler(rtuDevice)
-	handler.BaudRate = 115200
+	handler.BaudRate = 9600
 	handler.DataBits = 8
 	handler.Parity = "N"
 	handler.StopBits = 1
+	handler.Timeout = 1 * time.Second
 	handler.SlaveId = 2
 	handler.Logger = log.New(os.Stdout, "rtu: ", log.LstdFlags)
 	err := handler.Connect()
@@ -30,24 +31,10 @@ func main() {
 
 	client := modbus.NewClient(handler)
 
-	vendorName, productCode, majorMinorVersion, err := client.ReadDeviceIdentificationBasic()
+	value := []uint16{0x55, 0xAA}
+	err = client.WriteFileRecord(1, 1, value, 2)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("error writing file record: %v", err.Error())
 		return
-	}
-	fmt.Printf("vendor name: %s\n", vendorName)
-	fmt.Printf("product code: %s\n", productCode)
-	fmt.Printf("version: %s\n", majorMinorVersion)
-
-	for i := 0; i < 5; i++ {
-		results, err := client.ReadHoldingRegisters(8, 2)
-		if err != nil || results == nil {
-			fmt.Println(err.Error())
-			return
-		}
-		for i := 0; i < len(results); i++ {
-			fmt.Println(results[i])
-		}
-		time.Sleep(1 * time.Second)
 	}
 }

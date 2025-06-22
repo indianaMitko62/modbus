@@ -471,6 +471,108 @@ func (mb *client) ReadDeviceIdentificationSpecific(object_id uint8) (vendorName 
 	return mb.readDeviceIdentification(object_id, 0x04)
 }
 
+func (mb *client) WriteFileRecord(fileNumber uint16, recordNumber uint16, value []uint16, count uint16) (err error) {
+	if fileNumber == 0x0000 {
+		return fmt.Errorf("modbus: invalid file number: %v", fileNumber)
+	}
+	if recordNumber > 0x270F {
+		return fmt.Errorf("modbus: invalid record number: %v", recordNumber)
+	}
+	if count > 122 {
+		return fmt.Errorf("modbus: invalid record count: %v", count)
+	}
+
+	dataSize := uint8(count) * 2
+	data := []byte{7 + dataSize, 6,
+		byte((fileNumber >> 8) & 0xFF), byte(fileNumber & 0xFF),
+		byte((recordNumber >> 8) & 0xFF), byte(recordNumber & 0xFF),
+		0x00, uint8(count)}
+
+	recordBytes := make([]byte, dataSize)
+	putRegs(recordBytes, value, count)
+	data = append(data, recordBytes...)
+
+	request := ProtocolDataUnit{
+		FunctionCode: FuncCodeWriteFileRecord,
+		Data:         data,
+	}
+
+	response, err := mb.send(&request)
+	if err != nil {
+		return
+	}
+
+	r := bytes.NewReader(response.Data)
+
+	responseSize, err := r.ReadByte()
+	if err != nil {
+		return
+	}
+	if responseSize > 251 {
+		err = fmt.Errorf("modbus: response size invalid: %v", responseSize)
+		return
+	}
+
+	respReferenceType, err := r.ReadByte()
+	if err != nil {
+		return
+	}
+	if respReferenceType != 6 {
+		err = fmt.Errorf("modbus: response reference type invalid: %v", respReferenceType)
+		return
+	}
+
+	var buf [2]byte
+	_, err = io.ReadFull(r, buf[:])
+	if err != nil {
+		return
+	}
+
+	respFileNumber := binary.BigEndian.Uint16(buf[:])
+	if respFileNumber != fileNumber {
+		err = fmt.Errorf("modbus: response file number invalid: %v", respFileNumber)
+		return
+	}
+
+	_, err = io.ReadFull(r, buf[:])
+	if err != nil {
+		return
+	}
+
+	respRecordNumber := binary.BigEndian.Uint16(buf[:])
+	if respRecordNumber != recordNumber {
+		err = fmt.Errorf("modbus: response record number invalid: %v", respRecordNumber)
+		return
+	}
+
+	_, err = io.ReadFull(r, buf[:])
+	if err != nil {
+		return
+	}
+
+	respRecordLength := binary.BigEndian.Uint16(buf[:])
+	if respRecordLength != count {
+		err = fmt.Errorf("modbus: response record length invalid: %v", respRecordLength)
+		return
+	}
+
+	responseDataSize := respRecordLength * 2
+	responseRecordDataBytes := make([]byte, responseDataSize)
+
+	_, err = io.ReadFull(r, responseRecordDataBytes)
+	if err != nil {
+		return
+	}
+
+	responseRecordDataUint16 := bytesToUint16s(responseRecordDataBytes, binary.LittleEndian)
+	if !equalUint16Slices(value, responseRecordDataUint16) {
+		err = fmt.Errorf("modbus: request and response file record does not match")
+		return
+	}
+
+	return nil
+}
+
 // Request:
 //
 //	Function code         : 1 byte (0x16)
@@ -656,4 +758,36 @@ func responseError(response *ProtocolDataUnit) error {
 		mbError.ExceptionCode = response.Data[0]
 	}
 	return mbError
+}
+
+func putRegs(buf []byte, data []uint16, n uint16) {
+	for i := 0; i < int(n); i++ {
+		if 2*i+1 >= len(buf) {
+			break
+		}
+		val := data[i]
+		buf[2*i] = byte(val & 0x00FF) // low byte
+		buf[2*i+1] = byte(val >> 8)   // high byte
+	}
+}
+
+func bytesToUint16s(b []byte, order binary.ByteOrder) []uint16 {
+	n := len(b) / 2
+	out := make([]uint16, n)
+	for i := 0; i < n; i++ {
+		out[i] = order.Uint16(b[2*i : 2*i+2])
+	}
+	return out
+}
+
+func equalUint16Slices(a, b []uint16) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
