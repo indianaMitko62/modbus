@@ -23,6 +23,10 @@ Bit access:
 *   Mask Write Register
 *   Read FIFO Queue
 
+Other:
+*   Read Device Identification
+*   Write File Record
+
 Supported formats
 -----------------
 *   TCP
