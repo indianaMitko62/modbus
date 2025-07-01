@@ -471,6 +471,22 @@ func (mb *client) ReadDeviceIdentificationSpecific(object_id uint8) (vendorName 
 	return mb.readDeviceIdentification(object_id, 0x04)
 }
 
+// Request:
+//
+//	Function code         : 1 byte (0x15)
+//	Request data length   : 1 byte
+//Subrequest 1:
+//  Reference type:       : 1 byte
+//	File number           : 2 bytes (0x0001 to 0xFFFF)
+//	File record           : 2 bytes (0x0000 to 0x270F)
+// 	Record length         : 2 bytes (N count of 16-bit registers)
+//  Record data:          : 2 * N bytes
+//Subrequest 2:
+//  ...
+//
+// Response:
+//  The normal response is an echo of the request.
+
 func (mb *client) WriteFileRecord(fileNumber uint16, recordNumber uint16, value []uint16, count uint16) (err error) {
 	if fileNumber == 0x0000 {
 		return fmt.Errorf("modbus: invalid file number: %v", fileNumber)
