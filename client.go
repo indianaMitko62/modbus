@@ -782,8 +782,10 @@ func putRegs(buf []byte, data []uint16, n uint16) {
 			break
 		}
 		val := data[i]
-		buf[2*i] = byte(val & 0x00FF) // low byte
-		buf[2*i+1] = byte(val >> 8)   // high byte
+		buf[2*i] = byte(val >> 8)
+		buf[2*i+1] = byte(val & 0x00FF)
+		// buf[2*i] = byte(val & 0x00FF) // low byte
+		// buf[2*i+1] = byte(val >> 8)   // high byte
 	}
 }
 
