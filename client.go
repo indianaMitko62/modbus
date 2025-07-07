@@ -499,13 +499,12 @@ func (mb *client) WriteFileRecord(fileNumber uint16, recordNumber uint16, value 
 	}
 
 	dataSize := uint8(count) * 2
-	data := []byte{7 + dataSize, 6,
-		byte((fileNumber >> 8) & 0xFF), byte(fileNumber & 0xFF),
-		byte((recordNumber >> 8) & 0xFF), byte(recordNumber & 0xFF),
-		0x00, uint8(count)}
+	data := []byte{7 + dataSize, 6}
 
-	recordBytes := make([]byte, dataSize)
-	putRegs(recordBytes, value, count)
+	subrequest := dataBlock(fileNumber, recordNumber, count)
+	data = append(data, subrequest...)
+
+	recordBytes := dataBlock(value...)
 	data = append(data, recordBytes...)
 
 	request := ProtocolDataUnit{
@@ -580,7 +579,7 @@ func (mb *client) WriteFileRecord(fileNumber uint16, recordNumber uint16, value 
 		return
 	}
 
-	responseRecordDataUint16 := bytesToUint16s(responseRecordDataBytes, binary.LittleEndian)
+	responseRecordDataUint16 := bytesToUint16s(responseRecordDataBytes, binary.BigEndian)
 	if !equalUint16Slices(value, responseRecordDataUint16) {
 		err = fmt.Errorf("modbus: request and response file record does not match")
 		return
@@ -774,19 +773,6 @@ func responseError(response *ProtocolDataUnit) error {
 		mbError.ExceptionCode = response.Data[0]
 	}
 	return mbError
-}
-
-func putRegs(buf []byte, data []uint16, n uint16) {
-	for i := 0; i < int(n); i++ {
-		if 2*i+1 >= len(buf) {
-			break
-		}
-		val := data[i]
-		buf[2*i] = byte(val >> 8)
-		buf[2*i+1] = byte(val & 0x00FF)
-		// buf[2*i] = byte(val & 0x00FF) // low byte
-		// buf[2*i+1] = byte(val >> 8)   // high byte
-	}
 }
 
 func bytesToUint16s(b []byte, order binary.ByteOrder) []uint16 {
