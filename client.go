@@ -361,114 +361,135 @@ func (mb *client) WriteMultipleRegisters(address, quantity uint16, value []byte)
 // 			Object length  	: 1 byte
 // 			Object Value 	: Object length
 
-func (mb *client) readDeviceIdentification(object_id uint8, readDeviceIDCode uint8) (vendorName string, productCode string, majorMinorVersion string, err error) {
-	var meiType uint8 = 0x0E
-	data := []byte{meiType, readDeviceIDCode, object_id}
+// private helper – request + full parse
+func (mb *client) readDeviceIdentification(objectID, readDeviceIDCode uint8) (map[uint8][]byte, error) {
+	const meiType uint8 = 0x0E
+	data := []byte{meiType, readDeviceIDCode, objectID}
 	request := ProtocolDataUnit{
 		FunctionCode: FuncCodeReadDeviceIdentification,
 		Data:         data,
 	}
 	response, err := mb.send(&request)
 	if err != nil {
-		return // add error message
+		return nil, err
 	}
 
 	r := bytes.NewReader(response.Data)
 
+	// header
 	respMeiType, err := r.ReadByte()
 	if err != nil {
-		return
+		return nil, err
 	}
-	if meiType != uint8(respMeiType) {
-		err = fmt.Errorf("modbus: response mei type '%v' does not match request '%v'", respMeiType, meiType)
-		return
+	if respMeiType != meiType {
+		return nil, fmt.Errorf("modbus: response mei type '%v' does not match request '%v'", respMeiType, meiType)
 	}
 
 	respDeviceIDCode, err := r.ReadByte()
 	if err != nil {
-		return
+		return nil, err
 	}
-	if readDeviceIDCode != uint8(respDeviceIDCode) {
-		err = fmt.Errorf("modbus: response device ID code '%v' does not match request '%v'", respDeviceIDCode, readDeviceIDCode)
-		return
+	if respDeviceIDCode != readDeviceIDCode {
+		return nil, fmt.Errorf("modbus: response device ID code '%v' does not match request '%v'", respDeviceIDCode, readDeviceIDCode)
 	}
 
 	respConformityLevel, err := r.ReadByte()
 	if err != nil {
-		return
+		return nil, err
 	}
 	if respConformityLevel&0x01 > 3 {
-		err = fmt.Errorf("modbus: invalid response conformity level '%v'", respConformityLevel)
-		return
+		return nil, fmt.Errorf("modbus: invalid response conformity level '%v'", respConformityLevel)
 	}
 
 	moreFollows, err := r.ReadByte()
 	if err != nil {
-		return
+		return nil, err
 	}
 	if moreFollows != 0 && moreFollows != 0xFF {
-		err = fmt.Errorf("modbus: invalid response more follows flag '%v'", moreFollows)
-		return
+		return nil, fmt.Errorf("modbus: invalid response more follows flag '%v'", moreFollows)
 	}
 
 	nextObjectID, err := r.ReadByte()
 	if err != nil {
-		return
+		return nil, err
 	}
 	numberOfObjects, err := r.ReadByte()
 	if err != nil {
-		return
+		return nil, err
 	}
 	if nextObjectID != 0 {
-		err = fmt.Errorf("modbus: currently not supporting multi-transaction responses. Received first '%v' objects", numberOfObjects)
+		return nil, fmt.Errorf("modbus: currently not supporting multi-transaction responses. Received first '%v' objects", numberOfObjects)
 	}
 
-	var objID uint8
-	var objLen uint8
-
+	results := make(map[uint8][]byte)
 	for i := 0; i < int(numberOfObjects); i++ {
-		objID, err = r.ReadByte()
+		objID, err := r.ReadByte()
 		if err != nil {
-			return
+			return nil, err
 		}
-		objLen, err = r.ReadByte()
+		objLen, err := r.ReadByte()
 		if err != nil {
-			return
+			return nil, err
 		}
-		switch objID {
-		case 0x00:
-			vendorNameBytes := make([]byte, objLen)
-			_, err = io.ReadFull(r, vendorNameBytes)
-			if err != nil {
-				return
-			}
-			vendorName = string(vendorNameBytes)
-		case 0x01:
-			vendorPorductCodeBytes := make([]byte, objLen)
-			_, err = io.ReadFull(r, vendorPorductCodeBytes)
-			if err != nil {
-				return
-			}
-			productCode = string(vendorPorductCodeBytes)
-		case 0x02:
-			majorMinorVersionBytes := make([]byte, objLen)
-			_, err = io.ReadFull(r, majorMinorVersionBytes)
-			if err != nil {
-				return
-			}
-			majorMinorVersion = string(majorMinorVersionBytes)
+		val := make([]byte, objLen)
+		if _, err = io.ReadFull(r, val); err != nil {
+			return nil, err
 		}
+		results[objID] = val
 	}
+	return results, nil
+}
 
+// Basic (0x01)
+func (mb *client) ReadDeviceIdentificationBasic() (
+	vendorName, productCode, majorMinorVersion []byte, err error,
+) {
+	objs, e := mb.readDeviceIdentification(0, 0x01)
+	if e != nil {
+		err = e
+		return
+	}
+	vendorName = objs[0x00]
+	productCode = objs[0x01]
+	majorMinorVersion = objs[0x02]
 	return
 }
 
-func (mb *client) ReadDeviceIdentificationBasic() (vendorName string, productCode string, majorMinorVersion string, err error) {
-	return mb.readDeviceIdentification(0, 0x01)
+// Regular (0x02)
+func (mb *client) ReadDeviceIdentificationRegular() (
+	vendorURL, productName, modelName, userApplicationName []byte, err error,
+) {
+	objs, e := mb.readDeviceIdentification(0, 0x02)
+	if e != nil {
+		err = e
+		return
+	}
+	vendorURL = objs[0x03]
+	productName = objs[0x04]
+	modelName = objs[0x05]
+	userApplicationName = objs[0x06]
+	return
 }
 
-func (mb *client) ReadDeviceIdentificationSpecific(object_id uint8) (vendorName string, productCode string, majorMinorVersion string, err error) {
-	return mb.readDeviceIdentification(object_id, 0x04)
+// Extended (0x03)
+func (mb *client) ReadDeviceIdentificationExtended() (
+	objects map[uint8][]byte, err error,
+) {
+	objects, err = mb.readDeviceIdentification(0, 0x03)
+	return
+}
+
+// Specific (0x04)
+func (mb *client) ReadDeviceIdentificationSpecific(objectID uint8) (
+	value []byte, err error,
+) {
+	objs, e := mb.readDeviceIdentification(objectID, 0x04)
+	if e != nil {
+		err = e
+		return
+	}
+	value = objs[objectID]
+	return
 }
 
 // Request:
