@@ -505,6 +505,19 @@ func (mb *client) ReadDeviceIdentificationExtended() (ExtendedDeviceID, error) {
 	return out, nil
 }
 
+// Specific (0x04)
+func (mb *client) ReadDeviceIdentificationSpecific(objectID uint8) (
+	value []byte, err error,
+) {
+	objs, e := mb.readDeviceIdentification(objectID, 0x04)
+	if e != nil {
+		err = e
+		return
+	}
+	value = objs[objectID]
+	return
+}
+
 // Request:
 //
 //	Function code         : 1 byte (0x15)
