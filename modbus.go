@@ -82,6 +82,32 @@ type ProtocolDataUnit struct {
 	Data         []byte
 }
 
+// Structures that wrap the Read Device Identification Message reponses
+// BasicDeviceID contains the Basic objects (0x00–0x02)
+type BasicDeviceID struct {
+	VendorName        []byte // 0x00
+	ProductCode       []byte // 0x01
+	MajorMinorVersion []byte // 0x02
+}
+
+// RegularDeviceID contains Basic + Regular objects (0x03–0x06)
+type RegularDeviceID struct {
+	Basic BasicDeviceID
+
+	VendorURL           []byte // 0x03
+	ProductName         []byte // 0x04
+	ModelName           []byte // 0x05
+	UserApplicationName []byte // 0x06
+}
+
+// ExtendedDeviceID contains Regular + Extended objects (all supported IDs)
+type ExtendedDeviceID struct {
+	Regular RegularDeviceID
+
+	// Extended objects (0x07+) as map for flexibility
+	ExtendedObjects map[uint8][]byte
+}
+
 // Packager specifies the communication layer.
 type Packager interface {
 	Encode(pdu *ProtocolDataUnit) (adu []byte, err error)

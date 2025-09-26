@@ -441,55 +441,68 @@ func (mb *client) readDeviceIdentification(objectID, readDeviceIDCode uint8) (ma
 }
 
 // Basic (0x01)
-func (mb *client) ReadDeviceIdentificationBasic() (
-	vendorName, productCode, majorMinorVersion []byte, err error,
-) {
-	objs, e := mb.readDeviceIdentification(0, 0x01)
-	if e != nil {
-		err = e
-		return
+func (mb *client) ReadDeviceIdentificationBasic() (BasicDeviceID, error) {
+	var out BasicDeviceID
+	objs, err := mb.readDeviceIdentification(0, 0x01)
+	if err != nil {
+		return out, err
 	}
-	vendorName = objs[0x00]
-	productCode = objs[0x01]
-	majorMinorVersion = objs[0x02]
-	return
+	out.VendorName = objs[0x00]
+	out.ProductCode = objs[0x01]
+	out.MajorMinorVersion = objs[0x02]
+	return out, nil
 }
 
 // Regular (0x02)
-func (mb *client) ReadDeviceIdentificationRegular() (
-	vendorURL, productName, modelName, userApplicationName []byte, err error,
-) {
-	objs, e := mb.readDeviceIdentification(0, 0x02)
-	if e != nil {
-		err = e
-		return
+func (mb *client) ReadDeviceIdentificationRegular() (RegularDeviceID, error) {
+	var out RegularDeviceID
+	objs, err := mb.readDeviceIdentification(0, 0x02)
+	if err != nil {
+		return out, err
 	}
-	vendorURL = objs[0x03]
-	productName = objs[0x04]
-	modelName = objs[0x05]
-	userApplicationName = objs[0x06]
-	return
+
+	// Basic fields
+	out.Basic.VendorName = objs[0x00]
+	out.Basic.ProductCode = objs[0x01]
+	out.Basic.MajorMinorVersion = objs[0x02]
+
+	// Regular fields
+	out.VendorURL = objs[0x03]
+	out.ProductName = objs[0x04]
+	out.ModelName = objs[0x05]
+	out.UserApplicationName = objs[0x06]
+
+	return out, nil
 }
 
 // Extended (0x03)
-func (mb *client) ReadDeviceIdentificationExtended() (
-	objects map[uint8][]byte, err error,
-) {
-	objects, err = mb.readDeviceIdentification(0, 0x03)
-	return
-}
-
-// Specific (0x04)
-func (mb *client) ReadDeviceIdentificationSpecific(objectID uint8) (
-	value []byte, err error,
-) {
-	objs, e := mb.readDeviceIdentification(objectID, 0x04)
-	if e != nil {
-		err = e
-		return
+func (mb *client) ReadDeviceIdentificationExtended() (ExtendedDeviceID, error) {
+	var out ExtendedDeviceID
+	objs, err := mb.readDeviceIdentification(0, 0x03)
+	if err != nil {
+		return out, err
 	}
-	value = objs[objectID]
-	return
+
+	// Fill Basic
+	out.Regular.Basic.VendorName = objs[0x00]
+	out.Regular.Basic.ProductCode = objs[0x01]
+	out.Regular.Basic.MajorMinorVersion = objs[0x02]
+
+	// Fill Regular
+	out.Regular.VendorURL = objs[0x03]
+	out.Regular.ProductName = objs[0x04]
+	out.Regular.ModelName = objs[0x05]
+	out.Regular.UserApplicationName = objs[0x06]
+
+	// Extended objects (anything above 0x06)
+	out.ExtendedObjects = make(map[uint8][]byte)
+	for id, val := range objs {
+		if id > 0x06 {
+			out.ExtendedObjects[id] = val
+		}
+	}
+
+	return out, nil
 }
 
 // Request:
