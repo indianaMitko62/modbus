@@ -447,9 +447,9 @@ func (mb *client) ReadDeviceIdentificationBasic() (BasicDeviceID, error) {
 	if err != nil {
 		return out, err
 	}
-	out.VendorName = objs[0x00]
-	out.ProductCode = objs[0x01]
-	out.MajorMinorVersion = objs[0x02]
+	out.VendorName = objs[0]
+	out.ProductCode = objs[1]
+	out.MajorMinorVersion = objs[2]
 	return out, nil
 }
 
@@ -462,15 +462,15 @@ func (mb *client) ReadDeviceIdentificationRegular() (RegularDeviceID, error) {
 	}
 
 	// Basic fields
-	out.Basic.VendorName = objs[0x00]
-	out.Basic.ProductCode = objs[0x01]
-	out.Basic.MajorMinorVersion = objs[0x02]
+	out.VendorName = objs[0]
+	out.ProductCode = objs[1]
+	out.MajorMinorVersion = objs[2]
 
 	// Regular fields
-	out.VendorURL = objs[0x03]
-	out.ProductName = objs[0x04]
-	out.ModelName = objs[0x05]
-	out.UserApplicationName = objs[0x06]
+	out.VendorURL = objs[3]
+	out.ProductName = objs[4]
+	out.ModelName = objs[5]
+	out.UserApplicationName = objs[6]
 
 	return out, nil
 }
@@ -484,20 +484,20 @@ func (mb *client) ReadDeviceIdentificationExtended() (ExtendedDeviceID, error) {
 	}
 
 	// Fill Basic
-	out.Regular.Basic.VendorName = objs[0x00]
-	out.Regular.Basic.ProductCode = objs[0x01]
-	out.Regular.Basic.MajorMinorVersion = objs[0x02]
+	out.VendorName = objs[0]
+	out.ProductCode = objs[1]
+	out.MajorMinorVersion = objs[2]
 
 	// Fill Regular
-	out.Regular.VendorURL = objs[0x03]
-	out.Regular.ProductName = objs[0x04]
-	out.Regular.ModelName = objs[0x05]
-	out.Regular.UserApplicationName = objs[0x06]
+	out.VendorURL = objs[3]
+	out.ProductName = objs[4]
+	out.ModelName = objs[5]
+	out.UserApplicationName = objs[6]
 
-	// Extended objects (anything above 0x06)
+	// Extended objects (anything above 6)
 	out.ExtendedObjects = make(map[uint8][]byte)
 	for id, val := range objs {
-		if id > 0x06 {
+		if id > 6 {
 			out.ExtendedObjects[id] = val
 		}
 	}
