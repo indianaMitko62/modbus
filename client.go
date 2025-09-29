@@ -441,24 +441,22 @@ func (mb *client) readDeviceIdentification(objectID, readDeviceIDCode uint8) (ma
 }
 
 // Basic (0x01)
-func (mb *client) ReadDeviceIdentificationBasic() (BasicDeviceID, error) {
-	var out BasicDeviceID
+func (mb *client) ReadDeviceIdentificationBasic() (out BasicDeviceID, err error) {
 	objs, err := mb.readDeviceIdentification(0, 0x01)
 	if err != nil {
-		return out, err
+		return
 	}
 	out.VendorName = objs[0]
 	out.ProductCode = objs[1]
 	out.MajorMinorVersion = objs[2]
-	return out, nil
+	return
 }
 
 // Regular (0x02)
-func (mb *client) ReadDeviceIdentificationRegular() (RegularDeviceID, error) {
-	var out RegularDeviceID
+func (mb *client) ReadDeviceIdentificationRegular() (out RegularDeviceID, err error) {
 	objs, err := mb.readDeviceIdentification(0, 0x02)
 	if err != nil {
-		return out, err
+		return
 	}
 
 	// Basic fields
@@ -472,15 +470,14 @@ func (mb *client) ReadDeviceIdentificationRegular() (RegularDeviceID, error) {
 	out.ModelName = objs[5]
 	out.UserApplicationName = objs[6]
 
-	return out, nil
+	return
 }
 
 // Extended (0x03)
-func (mb *client) ReadDeviceIdentificationExtended() (ExtendedDeviceID, error) {
-	var out ExtendedDeviceID
+func (mb *client) ReadDeviceIdentificationExtended() (out ExtendedDeviceID, err error) {
 	objs, err := mb.readDeviceIdentification(0, 0x03)
 	if err != nil {
-		return out, err
+		return
 	}
 
 	// Fill Basic
@@ -502,19 +499,23 @@ func (mb *client) ReadDeviceIdentificationExtended() (ExtendedDeviceID, error) {
 		}
 	}
 
-	return out, nil
+	return
 }
 
 // Specific (0x04)
 func (mb *client) ReadDeviceIdentificationSpecific(objectID uint8) (
 	value []byte, err error,
 ) {
-	objs, e := mb.readDeviceIdentification(objectID, 0x04)
-	if e != nil {
-		err = e
+	objs, err := mb.readDeviceIdentification(objectID, 0x04)
+	if err != nil {
 		return
 	}
 	value = objs[objectID]
+	return
+}
+
+func (mb *client) ReadDeviceIdentificationMap(readDeviceIDCode uint8) (objs map[uint8][]byte, err error) {
+	objs, err = mb.readDeviceIdentification(0, readDeviceIDCode)
 	return
 }
 

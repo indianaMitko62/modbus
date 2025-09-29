@@ -47,10 +47,16 @@ type Client interface {
 	// of register in a remote device and returns FIFO value register.
 	ReadFIFOQueue(address uint16) (results []byte, err error)
 
+	// Read Device Identification API
+
+	// Read Device Identification with Default responses
+	// to each read device ID code according to official MODBUS documentation
 	ReadDeviceIdentificationBasic() (BasicDeviceID, error)
 	ReadDeviceIdentificationRegular() (RegularDeviceID, error)
 	ReadDeviceIdentificationExtended() (ExtendedDeviceID, error)
 	ReadDeviceIdentificationSpecific(objectID uint8) (value []byte, err error)
+	// Direct access to the object bytes of the Read Device Identification response
+	ReadDeviceIdentificationMap(readDeviceIDCode uint8) (objs map[uint8][]byte, err error)
 
 	WriteFileRecord(fileNumber uint16, recordNumber uint16, value []uint16, count uint16) (err error)
 }
